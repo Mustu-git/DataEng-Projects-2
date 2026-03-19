@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: staging
+    schema: staging
+    tables:
+      - name: stg_taxi_trips
+        description: "Cleaned staging model from Project 1."
+      - name: gold_daily_trips
+        description: "Daily KPI table from Project 1."
+      - name: gold_zone_demand
+        description: "Zone demand table from Project 1."
+      - name: gold_peak_hours
+        description: "Peak hours table from Project 1."
