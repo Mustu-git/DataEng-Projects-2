@@ -1,0 +1,8 @@
+data_source taxi_db:
+    type: postgres
+    host: localhost
+    port: 5433
+    username: taxi_user
+    password: taxi_pass
+    database: taxi_db
+    schema: staging

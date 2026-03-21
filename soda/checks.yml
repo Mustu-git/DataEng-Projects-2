@@ -1,0 +1,52 @@
+# Soda Core checks for NYC Taxi pipeline
+# Run with: soda scan -d taxi_db -c soda/configuration.yml soda/checks.yml
+
+checks for stg_taxi_trips:
+
+  # Volume check — must have at least 3M rows
+  - row_count > 3000000:
+      name: "Staging table has expected row volume"
+
+  # No nulls on critical columns
+  - missing_count(pickup_ts) = 0:
+      name: "No null pickup timestamps"
+
+  - missing_count(total_amount) = 0:
+      name: "No null total amounts"
+
+  # Revenue sanity — investigated Jan 2023: 25,049 rows have negative fares
+  # (min = -$900). These are refunds/chargebacks, not data errors.
+  # Threshold set to -1000 to catch truly anomalous values while allowing known negatives.
+  - min(fare_amount) >= -1000:
+      name: "No anomalous negative fares (refunds expected, threshold -$1000)"
+
+  # Trip distance sanity
+  - min(trip_distance) >= 0:
+      name: "No negative trip distances"
+
+  # Avg fare should be within expected range ($10–$50)
+  - avg(fare_amount) between 10 and 50:
+      name: "Average fare within expected range"
+
+  # Passenger count should be reasonable
+  - max(passenger_count) <= 9:
+      name: "No impossibly high passenger counts"
+
+
+checks for gold_daily_trips:
+
+  # Should have at least 30 rows (days of data)
+  - row_count >= 30:
+      name: "Gold daily trips has full month of data"
+
+  # No duplicate dates
+  - duplicate_count(trip_date) = 0:
+      name: "No duplicate dates in gold table"
+
+  # Revenue should always be positive
+  - min(total_revenue) > 0:
+      name: "All days have positive revenue"
+
+  # Avg daily trips sanity check
+  - avg(trip_count) between 50000 and 200000:
+      name: "Average daily trip count within expected range"
