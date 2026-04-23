@@ -1,0 +1,73 @@
+name: dbt CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "monitoring/dbt_observability/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "monitoring/dbt_observability/**"
+
+jobs:
+  dbt-test:
+    name: Run observability dbt tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nyc_taxi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install dbt-postgres==1.7.* psycopg2-binary
+
+      - name: Write profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          dbt_observability:
+            target: ci
+            outputs:
+              ci:
+                type: postgres
+                host: localhost
+                port: 5432
+                user: postgres
+                password: postgres
+                dbname: nyc_taxi
+                schema: observability
+                threads: 4
+          EOF
+
+      - name: dbt deps
+        working-directory: monitoring/dbt_observability
+        run: dbt deps
+
+      - name: dbt run
+        working-directory: monitoring/dbt_observability
+        run: dbt run
+
+      - name: dbt test
+        working-directory: monitoring/dbt_observability
+        run: dbt test
